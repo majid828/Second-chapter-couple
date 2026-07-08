@@ -1,1 +1,31 @@
+name: transport-memory
 
+channels:
+  - conda-forge
+  - defaults
+
+
+dependencies:
+
+  - python=3.11
+
+  - numpy
+  - scipy
+  - pandas
+
+  - matplotlib
+
+  - scikit-learn
+
+  - jupyter
+  - notebook
+
+  - pytest
+
+  - pyyaml
+
+  - pip
+
+  - pip:
+      - tqdm
+      - seaborn
