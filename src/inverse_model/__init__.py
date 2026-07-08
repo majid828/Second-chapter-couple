@@ -10,23 +10,28 @@ using constrained MAP estimation.
 
 """
 
+
 from .bayesian_inverse import (
     recover_memory_kernel
 )
+
 
 from .map_solver import (
     solve_map_problem
 )
 
+
 from .constraints import (
     positivity_constraint,
-    normalization_constraint
+    normalization_constraint,
+    normalize_memory
 )
 
+
 from .regularization import (
-    first_order_regularization,
     second_order_regularization
 )
+
 
 
 __all__ = [
@@ -39,7 +44,7 @@ __all__ = [
 
     "normalization_constraint",
 
-    "first_order_regularization",
+    "normalize_memory",
 
     "second_order_regularization"
 
