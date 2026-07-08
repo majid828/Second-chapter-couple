@@ -1,42 +1,92 @@
 # Physics-Constrained Transport Memory Kernel Framework
 
+A reproducible computational framework for identifying, recovering, and classifying transport memory kernels from tracer breakthrough curves.
+
+The framework combines:
+
+- physics-based transport kernels
+- Bayesian inverse modeling
+- uncertainty quantification
+- spatial plume analysis
+- memory mechanism identification
+- multisite transport classification
+
+
 ## Overview
 
-This repository implements a physics-constrained inverse framework for
-recovering transport memory functions from tracer breakthrough curves
-and spatial plume observations.
+Transport in heterogeneous porous media often exhibits non-Fickian behavior due to:
 
-The framework separates:
+- matrix diffusion
+- stagnant zones
+- preferential pathways
+- multiscale velocity distributions
 
-1. Spatial transport behavior:
-
-\[
-G(x,t)
-\]
-
-2. Temporal memory behavior:
+This framework introduces a memory-kernel approach where the tracer response is represented as:
 
 \[
-H(t)
+C(t)=K H(t)
 \]
-
-
-The complete workflow is:
-
-
-## Scientific Framework
-
-The concentration field is represented as:
-
-\[
-C(x,t)=M_0\int_0^t G(x,t-\tau)H(\tau)d\tau
-\]
-
 
 where:
 
-- G(x,t): spatial transport probability density
-- H(t): temporal transport memory function
+- \(C(t)\) is the observed breakthrough curve
+- \(K\) is the mobile transport operator
+- \(H(t)\) is the transport memory kernel
 
 
-## Repository Structure
+## Main Features
+
+### 1. BTC Processing
+
+- tracer breakthrough curve loading
+- normalization
+- spatial concentration processing
+
+
+### 2. Transport Kernel Modeling
+
+Includes:
+
+- exponential kernels
+- power-law kernels
+- hybrid memory kernels
+
+
+### 3. Inverse Memory Recovery
+
+The framework estimates:
+
+- temporal memory kernels
+- transport parameters
+- uncertainty bounds
+
+
+### 4. Uncertainty Quantification
+
+Methods:
+
+- Bayesian posterior covariance
+- bootstrap uncertainty analysis
+
+
+### 5. Spatial Transport Analysis
+
+Includes:
+
+- spatial probability kernels
+- plume statistics
+- characteristic functions
+- non-Gaussian transport indicators
+
+
+### 6. Multisite Classification
+
+Transport memory behavior is compared using:
+
+- Wasserstein distance
+- Dynamic Time Warping
+- Functional PCA
+- clustering
+
+
+# Repository Structure
