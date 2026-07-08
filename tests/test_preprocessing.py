@@ -66,7 +66,7 @@ def test_btc_normalization():
     )
 
 
-    normalized = normalize_btc(
+    normalized, area = normalize_btc(
 
         time,
 
