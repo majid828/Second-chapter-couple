@@ -1,1 +1,26 @@
+{
+    "site_id": "site_01",
 
+    "experiment_type": "tracer_transport",
+
+    "description": "Synthetic example tracer breakthrough curve",
+
+    "coordinates": {
+        "latitude": null,
+        "longitude": null
+    },
+
+    "hydraulic_parameters": {
+        "velocity": null,
+        "dispersion": null,
+        "porosity": null
+    },
+
+    "tracer_information": {
+        "name": null,
+        "injection_time": null,
+        "measurement_interval": null
+    },
+
+    "notes": "Replace this metadata with field site information."
+}
