@@ -1,51 +1,28 @@
 """
-Transport time-scale uncertainty analysis.
+Transport time-scale uncertainty with measurement noise.
 
-Purpose
--------
-Evaluate robustness of memory kernel recovery when
-the transport time scale is uncertain.
+This experiment evaluates memory recovery robustness under
+combined uncertainty:
 
-The mobile kernel is:
+1. Transport parameter uncertainty
+2. Measurement noise
 
-        g(t;m,b)
+Forward model:
+
+    BTC = K_true H + noise
+
+
+Inverse model:
+
+    BTC = K_est H
+
 
 where:
 
-        m : shape parameter
-        b : transport decay/time-scale parameter
+    K_est is constructed using uncertain transport parameter b.
 
 
-The forward model:
-
-        BTC = K_true H
-
-
-The inverse model:
-
-        BTC = K_est H
-
-
-where K_est is constructed using uncertain b.
-
-
-Workflow
---------
-
-1. Generate true memory function H(t)
-2. Generate true mobile kernel
-3. Construct K_true
-4. Generate synthetic BTC
-5. Perturb transport parameter b
-6. Construct K_est
-7. Recover memory kernel
-8. Calculate recovery metrics
-9. Perform Monte Carlo analysis
-10. Save tables and figures
-
-
-Run
----
+Run:
 
 python experiments/synthetic/run_transport_timescale_uncertainty.py
 
@@ -55,15 +32,13 @@ python experiments/synthetic/run_transport_timescale_uncertainty.py
 import sys
 from pathlib import Path
 
-
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
 
-
 # ------------------------------------------------
-# Add project root
+# Project root
 # ------------------------------------------------
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -75,12 +50,17 @@ sys.path.append(
 
 
 # ------------------------------------------------
-# Import framework
+# Imports
 # ------------------------------------------------
 
 
 from src.synthetic.generate_memory import (
     hybrid_memory
+)
+
+
+from src.synthetic.add_noise import (
+    add_gaussian_noise
 )
 
 
@@ -103,25 +83,24 @@ from src.validation import (
 
 
 # ------------------------------------------------
-# Output directories
+# Output folders
 # ------------------------------------------------
 
 
 RESULT_DIR = ROOT / "results"
 
-
 FIGURE_DIR = RESULT_DIR / "figures"
-
 
 TABLE_DIR = RESULT_DIR / "tables"
 
+KERNEL_DIR = RESULT_DIR / "recovered_kernels"
 
 
 for folder in [
 
     FIGURE_DIR,
-
-    TABLE_DIR
+    TABLE_DIR,
+    KERNEL_DIR
 
 ]:
 
@@ -147,26 +126,20 @@ def main():
 
 
     # ============================================
-    # Time discretization
+    # Time
     # ============================================
 
-
     time = np.linspace(
-
         0,
-
         50,
-
         300
-
     )
 
 
 
     # ============================================
-    # True memory kernel
+    # True memory function
     # ============================================
-
 
     H_true = hybrid_memory(
 
@@ -193,20 +166,31 @@ def main():
 
 
 
+    pd.DataFrame({
+
+        "time":time,
+
+        "H_true":H_true
+
+    }).to_csv(
+
+        KERNEL_DIR /
+        "H_true.csv",
+
+        index=False
+
+    )
+
+
+
     # ============================================
     # True transport parameters
     # ============================================
-
 
     m_true = 2.0
 
     b_true = 0.05
 
-
-
-    # ============================================
-    # True mobile kernel
-    # ============================================
 
 
     g_true = mobile_kernel(
@@ -241,16 +225,15 @@ def main():
 
 
     # ============================================
-    # Generate BTC
+    # Clean BTC
     # ============================================
-
 
     btc_clean = K_true @ H_true
 
 
 
     # ============================================
-    # Transport time-scale uncertainty
+    # Uncertainty levels
     # ============================================
 
     uncertainty_levels = [
@@ -276,12 +259,25 @@ def main():
 
 
 
+    save_cases = {
+
+        0.00,
+        0.10,
+        0.30,
+        0.50
+
+    }
+
+
+
     results = []
+
+    saved = {}
 
 
 
     # ============================================
-    # Monte Carlo loop
+    # Monte Carlo
     # ============================================
 
 
@@ -314,14 +310,8 @@ def main():
 
 
             # ------------------------------------
-            # Perturb b parameter
-            #
-            # additive perturbation:
-            #
-            # b_est = b_true +/- uncertainty*b_true
-            #
+            # Transport uncertainty
             # ------------------------------------
-
 
             b_est = b_true * (
 
@@ -335,17 +325,10 @@ def main():
 
 
 
-            # keep physical
-
             if b_est <= 0:
 
                 b_est = b_true
 
-
-
-            # ------------------------------------
-            # Estimated kernel
-            # ------------------------------------
 
 
             g_est = mobile_kernel(
@@ -368,6 +351,7 @@ def main():
             )
 
 
+
             K_est = build_convolution_matrix(
 
                 g_est,
@@ -379,21 +363,36 @@ def main():
 
 
             # ------------------------------------
-            # Recover memory
+            # Add measurement noise
             # ------------------------------------
 
+            btc_observed = add_gaussian_noise(
+
+                btc_clean,
+
+                noise_level=0.05,
+
+                random_seed=5000 + realization
+
+            )
+
+
+
+            # ------------------------------------
+            # Recovery
+            # ------------------------------------
 
             recovered = recover_memory_kernel(
 
                 time,
 
-                btc_clean,
+                btc_observed,
 
                 K_est,
 
                 lam=1e-5,
 
-                noise_variance=None
+                noise_variance=0.05**2
 
             )
 
@@ -402,8 +401,6 @@ def main():
 
 
 
-            # physical correction
-
             H_rec = np.maximum(
 
                 H_rec,
@@ -411,7 +408,6 @@ def main():
                 0
 
             )
-
 
 
             integral = np.trapezoid(
@@ -430,9 +426,8 @@ def main():
 
 
             # ------------------------------------
-            # Validation
+            # Metrics
             # ------------------------------------
-
 
             metrics = validate_memory_recovery(
 
@@ -441,7 +436,6 @@ def main():
                 H_rec
 
             )
-
 
 
             kernel_difference = (
@@ -470,26 +464,21 @@ def main():
 
                 uncertainty,
 
-
                 "realization":
 
                 realization,
-
 
                 "estimated_b":
 
                 b_est,
 
-
                 "kernel_difference":
 
                 kernel_difference,
 
-
                 "relative_L2_error":
 
                 metrics["relative_L2_error"],
-
 
                 "correlation":
 
@@ -499,8 +488,48 @@ def main():
 
 
 
+            # Save representative kernels
+
+            if (
+
+                uncertainty in save_cases
+
+                and realization == 0
+
+            ):
+
+
+                saved[uncertainty] = H_rec.copy()
+
+
+
     # ============================================
-    # Save raw results
+    # Save recovered kernels
+    # ============================================
+
+
+    for level, kernel in saved.items():
+
+        pd.DataFrame({
+
+            "time":time,
+
+            "memory":kernel
+
+        }).to_csv(
+
+            KERNEL_DIR /
+
+            f"H_rec_{int(level*100)}percent.csv",
+
+            index=False
+
+        )
+
+
+
+    # ============================================
+    # Statistics
     # ============================================
 
 
@@ -523,16 +552,9 @@ def main():
 
 
 
-    # ============================================
-    # Statistics
-    # ============================================
-
-
     stats = (
 
-        raw
-
-        .groupby(
+        raw.groupby(
 
             "timescale_uncertainty"
 
@@ -565,7 +587,6 @@ def main():
     )
 
 
-
     stats.columns = [
 
         "timescale_uncertainty",
@@ -583,7 +604,6 @@ def main():
         "correlation_std"
 
     ]
-
 
 
     stats.to_csv(
@@ -605,15 +625,11 @@ def main():
 
 
     # ============================================
-    # Error plot
+    # Plot error
     # ============================================
 
 
-    plt.figure(
-
-        figsize=(7,5)
-
-    )
+    plt.figure(figsize=(7,5))
 
 
     plt.errorbar(
@@ -630,28 +646,16 @@ def main():
 
 
     plt.xlabel(
-
         "Transport time-scale uncertainty"
-
     )
 
 
     plt.ylabel(
-
         "Relative L2 error"
-
-    )
-
-
-    plt.title(
-
-        "Memory recovery sensitivity to transport time-scale uncertainty"
-
     )
 
 
     plt.grid(True)
-
 
     plt.tight_layout()
 
@@ -672,15 +676,11 @@ def main():
 
 
     # ============================================
-    # Correlation plot
+    # Plot correlation
     # ============================================
 
 
-    plt.figure(
-
-        figsize=(7,5)
-
-    )
+    plt.figure(figsize=(7,5))
 
 
     plt.errorbar(
@@ -697,37 +697,22 @@ def main():
 
 
     plt.xlabel(
-
         "Transport time-scale uncertainty"
-
     )
 
 
     plt.ylabel(
-
         "Correlation"
-
     )
 
 
     plt.ylim(
-
         0,
-
         1.05
-
-    )
-
-
-    plt.title(
-
-        "Correlation degradation under transport uncertainty"
-
     )
 
 
     plt.grid(True)
-
 
     plt.tight_layout()
 
@@ -747,9 +732,75 @@ def main():
 
 
 
+    # ============================================
+    # Kernel comparison figure
+    # ============================================
+
+
+    plt.figure(figsize=(8,5))
+
+
+    plt.plot(
+
+        time,
+
+        H_true,
+
+        label="True"
+
+    )
+
+
+    for level, kernel in saved.items():
+
+        plt.plot(
+
+            time,
+
+            kernel,
+
+            label=f"{int(level*100)}%"
+
+        )
+
+
+    plt.xlabel(
+        "Time"
+    )
+
+
+    plt.ylabel(
+        "Memory kernel H(t)"
+    )
+
+
+    plt.legend()
+
+
+    plt.grid(True)
+
+
+    plt.tight_layout()
+
+
+    plt.savefig(
+
+        FIGURE_DIR /
+
+        "recovered_kernel_comparison.png",
+
+        dpi=300
+
+    )
+
+
+    plt.close()
+
+
+
     print(
 
-        "\nTransport time-scale uncertainty experiment completed."
+        "\nTransport time-scale uncertainty completed."
 
     )
 
