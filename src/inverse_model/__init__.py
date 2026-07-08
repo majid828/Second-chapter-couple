@@ -2,12 +2,7 @@
 Bayesian inverse model module.
 
 Recover temporal memory kernel H(t)
-from observed BTC:
-
-f = K H
-
-using constrained MAP estimation.
-
+from BTC observations.
 """
 
 
