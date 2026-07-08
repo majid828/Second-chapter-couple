@@ -1,5 +1,5 @@
 """
-Bayesian inverse model module.
+High-level Bayesian inverse model.
 
 Recover temporal memory kernel H(t)
 from observed BTC:
@@ -7,40 +7,142 @@ from observed BTC:
 f = K H
 
 using constrained MAP estimation.
-
 """
 
-from .bayesian_inverse import (
-    recover_memory_kernel
-)
+
+import numpy as np
+
 
 from .map_solver import (
     solve_map_problem
 )
 
-from .constraints import (
-    positivity_constraint,
-    normalization_constraint
-)
 
 from .regularization import (
-    first_order_regularization,
     second_order_regularization
 )
 
 
-__all__ = [
 
-    "recover_memory_kernel",
+def recover_memory_kernel(
+        time,
+        btc,
+        convolution_matrix,
+        lam=1e-5,
+        noise_variance=None,
+        regularization_order=2
+):
+    """
+    Recover temporal memory kernel.
 
-    "solve_map_problem",
+    Parameters
+    ----------
+    time :
+        time vector
 
-    "positivity_constraint",
+    btc :
+        observed breakthrough curve
 
-    "normalization_constraint",
+    convolution_matrix :
+        transport convolution matrix
 
-    "first_order_regularization",
+    lam :
+        regularization parameter
 
-    "second_order_regularization"
+    noise_variance :
+        measurement variance
 
-]
+
+    Returns
+    -------
+    dict
+
+        memory
+
+        regularization_matrix
+
+    """
+
+
+
+    time = np.asarray(
+        time,
+        dtype=float
+    )
+
+
+    btc = np.asarray(
+        btc,
+        dtype=float
+    )
+
+
+    n = len(time)
+
+
+
+    # ------------------------------
+    # Regularization operator
+    # ------------------------------
+
+    if regularization_order == 2:
+
+        L = second_order_regularization(
+            n
+        )
+
+    else:
+
+        raise ValueError(
+            "Only second order regularization is implemented."
+        )
+
+
+
+    # ------------------------------
+    # Estimate noise variance
+    # ------------------------------
+
+    if noise_variance is None:
+
+        noise_variance = np.var(
+            btc
+        )
+
+
+
+    # ------------------------------
+    # MAP recovery
+    # ------------------------------
+
+    H = solve_map_problem(
+
+        convolution_matrix,
+
+        btc,
+
+        L,
+
+        time,
+
+        lam,
+
+        noise_variance
+
+    )
+
+
+
+    return {
+
+        "time": time,
+
+        "memory": H,
+
+        "regularization_matrix": L,
+
+        "lambda": lam,
+
+        "noise_variance": noise_variance
+
+    }
