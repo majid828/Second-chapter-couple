@@ -11,7 +11,7 @@ from src.inverse_model.constraints import (
 )
 
 from src.inverse_model.regularization import (
-    first_order_difference_matrix
+    second_order_regularization
 )
 
 
@@ -23,7 +23,7 @@ def test_positive_constraint():
 
     result = positivity_constraint(H)
 
-    assert result is True
+    assert bool(result) is True
 
 
 
@@ -32,11 +32,13 @@ def test_normalization_constraint():
     time = np.linspace(
         0,
         10,
-        100
+        200
     )
 
+    # create positive memory function
     H = np.exp(-0.3*time)
 
+    # normalize
     H = normalize_memory(
         time,
         H
@@ -47,14 +49,25 @@ def test_normalization_constraint():
         H
     )
 
-    assert result is True
+    assert bool(result) is True
 
 
 
-def test_regularization_matrix():
+def test_second_order_regularization():
 
-    L = first_order_difference_matrix(
-        10
+    n = 10
+
+    L = second_order_regularization(
+        n
     )
 
-    assert L.shape == (9,10)
+    # second derivative matrix shape
+    assert L.shape == (
+        n-2,
+        n
+    )
+
+    # check matrix construction
+    assert L[0,0] == 1
+    assert L[0,1] == -2
+    assert L[0,2] == 1
