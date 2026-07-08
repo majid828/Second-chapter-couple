@@ -1,1 +1,25 @@
+cff-version: 1.2.0
 
+message: "If you use this software, please cite this repository."
+
+title: "Physics-Constrained Transport Memory Kernel Framework"
+
+type: software
+
+authors:
+  - family-names: Shah
+    given-names: Majid
+
+version: 1.0.0
+
+date-released: 2026-07-07
+
+repository-code: https://github.com/YOUR_USERNAME/transport-memory-kernel-framework
+
+license: MIT
+
+abstract: >
+  A physics-constrained computational framework for recovering
+  transport memory kernels from tracer breakthrough curves,
+  performing uncertainty quantification, identifying transport
+  mechanisms, and classifying multi-site memory behavior.
