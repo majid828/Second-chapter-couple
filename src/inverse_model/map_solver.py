@@ -1,28 +1,25 @@
 """
-MAP solver for constrained memory recovery.
+Physically constrained MAP solver for transport memory recovery.
 
 Solves:
 
 min_H
 
-0.5(f-KH)^T Sigma^-1(f-KH)
-
+0.5 ||K H - f||^2_sigma
 +
+lambda/2 ||L H||^2
 
-lambda/2 ||LH||^2
 
+Subject to:
 
-subject to:
+H >= 0
 
-H>=0
+Integral(H)=1
 
 """
 
 import numpy as np
-
 import cvxpy as cp
-
-
 
 
 
@@ -30,128 +27,110 @@ def solve_map_problem(
         K,
         f,
         L,
+        time,
         lam=1e-3,
-        noise_variance=1e-4
+        noise_variance=None
 ):
-    """
-    Solve constrained MAP inverse problem.
 
+    K=np.asarray(K,dtype=float)
 
-    Parameters
-    ----------
+    f=np.asarray(f,dtype=float)
 
-    K :
-        convolution matrix
+    L=np.asarray(L,dtype=float)
 
-
-    f :
-        normalized BTC
-
-
-    L :
-        regularization matrix
-
-
-    lam :
-        regularization strength
-
-
-    noise_variance :
-        measurement variance
-
-
-
-    Returns
-    -------
-
-    H_est
-
-    """
-
-
-
-    K=np.asarray(K)
-
-    f=np.asarray(f)
-
-    L=np.asarray(L)
-
+    time=np.asarray(time,dtype=float)
 
 
     n=K.shape[1]
 
 
-    # unknown memory vector
+    dt=np.mean(
+        np.diff(time)
+    )
+
+
+    if noise_variance is None:
+
+        noise_variance=np.var(
+            f
+        )
+
 
     H=cp.Variable(
-        n
+        n,
+        nonneg=True
     )
 
 
-    residual = (
-        f-K@H
+    residual=f-K@H
+
+
+    data_term=(
+
+        cp.sum_squares(residual)
+
+        /
+
+        (2*noise_variance)
+
     )
 
 
-    data_term = cp.sum_squares(
-        residual
-    )/(2*noise_variance)
+    reg_term=(
 
+        lam/2
 
-    regularization = (
-        lam/2 *
+        *
+
         cp.sum_squares(
             L@H
         )
+
     )
 
 
-    objective = cp.Minimize(
-        data_term+
-        regularization
+    objective=cp.Minimize(
+
+        data_term+reg_term
+
     )
 
 
     constraints=[
 
-        H>=0
+        cp.sum(H)*dt == 1
 
     ]
 
 
     problem=cp.Problem(
+
         objective,
+
         constraints
+
     )
 
 
     problem.solve(
-        solver=cp.OSQP
+
+        solver=cp.CLARABEL
+
     )
 
 
     if H.value is None:
 
         raise RuntimeError(
-            "MAP optimization failed."
+
+            "MAP solver failed"
+
         )
 
 
-    H_solution=np.array(
+    H_est=np.asarray(
         H.value
     )
 
 
-    # finite-window normalization
-
-    integral=np.sum(
-        H_solution
-    )
-
-
-    if integral>0:
-
-        H_solution /= integral
-
-
-    return H_solution
+    return H_est
